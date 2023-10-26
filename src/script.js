@@ -5,7 +5,7 @@ let chartConfig;
 
 async function getLatestWindData() {
   if (!data) {
-    data = await fetch('https://wind.rw251.com/data.php').then((x) => x.json());
+    data = await fetch('/getLatest').then((x) => x.json());
   }
 
   const maxYAxisValue =
