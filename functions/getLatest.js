@@ -29,7 +29,6 @@ async function shouldUpdate(feed) {
 }
 
 function xml2json(xml) {
-  console.log(xml);
   const arr = [];
   const match = xml.match(/<responseList><item>(.+)<\/item><\/responseList>/);
   const items = match[1].split('</item><item>').forEach((item) => {
