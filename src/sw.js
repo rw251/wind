@@ -1,10 +1,10 @@
-const CACHE_NAME = 'windyx-v1.7';
+const CACHE_NAME = 'windyx-v1.8';
 
 // Never cache
 const nc = [/\.map$/, /manifest.*\.js(?:on)?$/, /\.htaccess/];
 
 // Network first
-const nf = [/script.js/, /index.html/, /wind.rw251.com\/data\.php/];
+const nf = [/script.js/, /index.html/, /wind.rw251.com\/getLatest/];
 
 const precacheFiles = ['/', 'script.js', 'index.html'];
 
