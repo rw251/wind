@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "cp ./src/*.* ./public"
+    "build": "cp ./src/*.* ./public",
+    "dev": "npx wrangler pages dev public/ --kv WIND",
+    "predev": "npm run build"
   },
   "author": "",
   "license": "ISC"
