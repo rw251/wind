@@ -1,9 +1,7 @@
 const FEED = {
   ESO: 'eso',
   ESO_HISTORIC: 'eso-historic',
-  BMRS: 'bmrs',
-  BMRS_1: 'bmrs-1',
-  BMRS_2: 'bmrs-2',
+  BMRS_HISTORIC: 'bmrs-historic',
   BMRS_CURRENT: 'bmrs-current',
 };
 
@@ -18,7 +16,7 @@ async function shouldUpdate(feed) {
   console.log(`${feed} last updated on ${lastUpdated}`);
   if (feed === FEED.eso) {
     lastUpdated.setMinutes(lastUpdated.getMinutes() + 140);
-  } else if ([FEED.ESO_HISTORIC, FEED.BMRS_1, FEED.BMRS_2].indexOf(feed) > -1) {
+  } else if ([FEED.ESO_HISTORIC].indexOf(feed) > -1) {
     lastUpdated.setHours(0);
     lastUpdated.setDate(lastUpdated.getDate() + 1);
   } else {
@@ -66,51 +64,46 @@ async function getEsoFeed() {
   return data.result.records;
 }
 
-async function getBrmsFeed(daysAgo) {
-  const nDaysAgo = new Date();
-  nDaysAgo.setDate(nDaysAgo.getDate() - daysAgo);
-  const nDaysAgoString = nDaysAgo.toISOString().substring(0, 10);
-  const url = `https://api.bmreports.com/BMRS/B1630/v1?APIKey=${env.API_KEY}&SettlementDate=${nDaysAgoString}&Period=*&ServiceType=xml`;
-  const xml = await fetch(url).then((resp) => resp.text());
-  const json = xml2json(xml);
-
-  return json;
+async function getBrmsHistoric() {
+  const dateMarker = new Date();
+  const dateTo = dateMarker.toISOString().substring(0, 10);
+  dateMarker.setDate(dateMarker.getDate() - 2);
+  const dateFrom = dateMarker.toISOString().substring(0, 10);
+  const url = `https://data.elexon.co.uk/bmrs/api/v1/generation/actual/per-type/wind-and-solar?from=${dateFrom}&to=${dateTo}&settlementPeriodFrom=0&settlementPeriodTo=48&format=json`;
+  const data = await fetch(url).then((resp) => resp.json());
+  return data.data
+    .filter((x) => x.psrType.toLowerCase().indexOf('wind') > -1)
+    .map((x) => {
+      return {
+        quantity: x.quantity,
+        period: x.settlementPeriod,
+        type: x.psrType,
+        startTimeISO: x.startTime,
+      };
+    });
 }
 
 async function getBrmsCurrentFeed() {
-  const url = `https://downloads.elexonportal.co.uk/fuel/download/latest?key=${env.API_KEY}`;
-  const xml = await fetch(url).then((resp) => resp.text());
-
-  const [, wDate, wData] = xml
-    .replace(/\n/g, '')
-    .match(/INST AT="([^"]+)[^>]*>(.+)<\/INST/);
-  const w = wData.match(/TYPE="WIND".*?VAL="([^"]+)"/)[1];
-
-  const [, whDateRange, whData] = xml
-    .replace(/\n/g, '')
-    .match(/HH.*?AT="([^"]+)[^>]*>(.+)<\/HH/);
-  const whDate = `${whDateRange.substring(0, 5)}:00`;
-  const wh = whData.match(/TYPE="WIND".*?VAL="([^"]+)"/)[1];
+  const url = `https://data.elexon.co.uk/bmrs/api/v1/generation/outturn/current?fuelType=WIND&format=json`;
+  const data = await fetch(url).then((x) => x.json());
+  const dateMarker = new Date();
+  const wDate = dateMarker.toISOString().substring(0, 19);
+  dateMarker.setMinutes(dateMarker.getMinutes() - 30);
+  const whDate = dateMarker.toISOString().substring(0, 19);
 
   return {
-    windNow: +w,
+    windNow: data[0].currentUsage,
     windNowDate: wDate,
-    windLastHalfHour: +wh,
+    windLastHalfHour: data[0].halfHourUsage,
     windLastHalfHourStartDate: whDate,
   };
 }
 
 async function getFeed(feed) {
   switch (feed) {
-    case FEED.BMRS:
-      console.log(`Getting getBrmsFeed(0)...`);
-      return await getBrmsFeed(0);
-    case FEED.BMRS_1:
-      console.log(`Getting getBrmsFeed(1)...`);
-      return await getBrmsFeed(1);
-    case FEED.BMRS_2:
-      console.log(`Getting getBrmsFeed(2)...`);
-      return await getBrmsFeed(2);
+    case FEED.BMRS_HISTORIC:
+      console.log(`Getting getBrmsHistoric()...`);
+      return await getBrmsHistoric();
     case FEED.ESO:
       console.log(`Getting getEsoFeed()...`);
       return await getEsoFeed();
@@ -139,10 +132,8 @@ export async function onRequest(context) {
 
   const dataJson = await env.WIND.get('data.json');
   data = dataJson ? JSON.parse(dataJson) : {};
-  let updated = await updateFeed(FEED.BMRS);
-  updated = (await updateFeed(FEED.BMRS_1)) || updated;
-  updated = (await updateFeed(FEED.BMRS_2)) || updated;
-  updated = (await updateFeed(FEED.BMRS_CURRENT)) || updated;
+  let updated = await updateFeed(FEED.BMRS_CURRENT);
+  updated = (await updateFeed(FEED.BMRS_HISTORIC)) || updated;
   updated = (await updateFeed(FEED.ESO)) || updated;
   updated = (await updateFeed(FEED.ESO_HISTORIC)) || updated;
 

@@ -17,40 +17,11 @@ async function getLatestWindData() {
   chartConfig.options.scales.y1.max = maxYAxisValue;
   chartConfig.plugins.beforeDraw = genBeforeDrawFunction();
 
-  if (!data.bmrs) data.bmrs = [];
-  if (!data['bmrs-1']) data['bmrs-1'] = [];
-  if (!data['bmrs-2']) data['bmrs-2'] = [];
+  if (!data['bmrs-historic']) data['bmrs-historic'] = [];
 
   const bmrsData = {};
-  data.bmrs.forEach((x) => {
-    const date = new Date();
-    date.setSeconds(0);
-    date.setHours(0);
-    date.setMilliseconds(0);
-    date.setMinutes(30 * (x.period - 1));
-    const isoString = date.toISOString().substring(0, 19);
-    if (!bmrsData[isoString]) bmrsData[isoString] = {};
-    bmrsData[isoString][x.type] = x.quantity;
-  });
-  data['bmrs-1'].forEach((x) => {
-    const date = new Date();
-    date.setSeconds(0);
-    date.setHours(0);
-    date.setMilliseconds(0);
-    date.setDate(date.getDate() - 1);
-    date.setMinutes(30 * (x.period - 1));
-    const isoString = date.toISOString().substring(0, 19);
-    if (!bmrsData[isoString]) bmrsData[isoString] = {};
-    bmrsData[isoString][x.type] = x.quantity;
-  });
-  data['bmrs-2'].forEach((x) => {
-    const date = new Date();
-    date.setSeconds(0);
-    date.setHours(0);
-    date.setMilliseconds(0);
-    date.setDate(date.getDate() - 2);
-    date.setMinutes(30 * (x.period - 1));
-    const isoString = date.toISOString().substring(0, 19);
+  data['bmrs-historic'].forEach((x) => {
+    const isoString = x.startTimeISO.substring(0, 19);
     if (!bmrsData[isoString]) bmrsData[isoString] = {};
     bmrsData[isoString][x.type] = x.quantity;
   });
